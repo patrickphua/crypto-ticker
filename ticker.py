@@ -33,12 +33,36 @@ class Ticker(Frame):
 
         super().__init__(*args, **kwargs)
 
-    def get_symbols(self):
-        """Get the symbols to include"""
-        symbols = os.environ.get('SYMBOLS', 'btc,eth')
-        if not symbols:
-            return 'btc,eth,xrp,sol'
-        return symbols
+    def get_crypto_symbols(self):
+        return os.environ.get('CRYPTO_SYMBOLS', 'btc,eth')
+
+    def get_stock_symbols(self):
+        return os.environ.get('STOCK_SYMBOLS', 'crcl')
+
+    # def get_symbols(self):
+    #     """Get the symbols to include"""
+    #     symbols = os.environ.get('SYMBOLS', 'btc,eth')
+    #     if not symbols:
+    #         return 'btc,eth,xrp,sol'
+    #     return symbols
+
+    # Crypto API (default: CoinGecko)
+        crypto_api_cls = get_api_cls('coingecko')
+        self.crypto_api = crypto_api_cls(
+            symbols=self.get_crypto_symbols(),
+            currency=self.get_currency()
+        )
+
+        # Stock API (Alpha Vantage)
+        stock_symbols = self.get_stock_symbols()
+        if stock_symbols:
+            stock_api_cls = get_api_cls('alphavantage')
+            self.stock_api = stock_api_cls(
+                symbols=stock_symbols,
+                currency=self.get_currency()
+            )
+        else:
+            self.stock_api = None
 
     def get_currency(self):
         """Get the currency to use"""
@@ -67,8 +91,18 @@ class Ticker(Frame):
             # logger.info('Using cached price data.')
             return self._cached_price_data
 
-        # Otherwise fetch new data and set the _last_fetch_time
-        price_data = self.api.fetch_price_data()
+        price_data = []
+        try:
+            price_data.extend(self.crypto_api.fetch_price_data())
+        except Exception as e:
+            logger.error(f"Error fetching crypto prices: {e}")
+
+        if self.stock_api:
+            try:
+                price_data.extend(self.stock_api.fetch_price_data())
+            except Exception as e:
+                logger.error(f"Error fetching stock prices: {e}")
+
         self._last_fetch_time = time.time()
         self._cached_price_data = price_data
 
@@ -111,6 +145,10 @@ class Ticker(Frame):
             graphics.DrawText(canvas, font_price, 25, 19, change_color, price)
         elif asset['symbol'] == "sol":
             img = Image.open(r"image/sol.jpeg")
+            price = f"{float(asset['price']):.2f}"
+            graphics.DrawText(canvas, font_price, 25, 19, change_color, price)
+        elif asset['symbol'] == "aapl":
+            img = Image.open(r"image/crcl.jpeg")  # Ensure this image exists
             price = f"{float(asset['price']):.2f}"
             graphics.DrawText(canvas, font_price, 25, 19, change_color, price)
         # remove half-lighted pixels at the corners

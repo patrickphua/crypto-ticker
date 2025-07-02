@@ -17,7 +17,9 @@ logger.addHandler(handler)
 
 
 API_CLASS_MAP = {'coinmarketcap': 'CoinMarketCap',
-                 'coingecko': 'CoinGecko', 'binance': 'Binance'}
+                 'coingecko': 'CoinGecko',
+                 'binance': 'Binance',
+                 'alphavantage': 'AlphaVantageAPI'}
 
 
 def get_api_cls(api_name):
@@ -226,4 +228,46 @@ class Binance(PriceAPI):
             except:
                 logger.error(f'JSON decode error: {response.text}')
 
+        return price_data
+
+
+class AlphaVantageAPI(PriceAPI):
+    @property
+    def supported_currencies(self):
+        return ["usd"]
+
+    def fetch_price_data(self):
+        api_key = os.environ.get('ALPHA_VANTAGE_API_KEY')
+        if not api_key:
+            raise RuntimeError('ALPHA_VANTAGE_API_KEY environment variable must be set.')
+        base_url = 'https://www.alphavantage.co/query'
+        price_data = []
+        for symbol in self.get_symbols():
+            try:
+                params = {
+                    'function': 'TIME_SERIES_INTRADAY',
+                    'symbol': symbol.upper(),
+                    'interval': '5min',
+                    'apikey': api_key
+                }
+                response = requests.get(base_url, params=params)
+                data = response.json()
+                ts = data.get("Time Series (5min)")
+                if not ts:
+                    logger.error(f'Alpha Vantage API error or no data for symbol {symbol}: {data}')
+                    continue
+                times = sorted(ts.keys(), reverse=True)
+                latest = ts[times[0]]
+                prev = ts[times[1]] if len(times) > 1 else latest
+                price = float(latest["4. close"])
+                prev_close = float(prev["4. close"])
+                change = price - prev_close
+                change_pct = (change / prev_close) * 100 if prev_close else 0
+                price_data.append({
+                    'symbol': symbol.lower(),
+                    'price': f"{price:.2f}",
+                    'change_24h': f"{change_pct:+.2f}"
+                })
+            except Exception as e:
+                logger.error(f'Error fetching data for {symbol} from Alpha Vantage: {e}')
         return price_data
