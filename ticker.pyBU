@@ -37,7 +37,7 @@ class Ticker(Frame):
         """Get the symbols to include"""
         symbols = os.environ.get('SYMBOLS', 'btc,eth')
         if not symbols:
-            return 'btc,eth,xrp,sol'
+            return 'btc,eth'
         return symbols
 
     def get_currency(self):
@@ -64,7 +64,7 @@ class Ticker(Frame):
 
         # See if we should return the cached price data
         if self._cached_price_data and not cache_is_stale:
-            # logger.info('Using cached price data.')
+            logger.info('Using cached price data.')
             return self._cached_price_data
 
         # Otherwise fetch new data and set the _last_fetch_time
@@ -98,21 +98,20 @@ class Ticker(Frame):
         # Draw the elements on the canvas
         # Symbol Image
         if asset['symbol'] == "btc":
+            # graphics.DrawText(canvas, font_symbol_image, 3, 18, symbol_color, 'B')
             img = Image.open(r"image/btc.jpeg")
-            price = f"{float(asset['price']):,.0f}"
-            graphics.DrawText(canvas, font_price, 25, 19, change_color, price)
+            price = f"{float(asset['price']):.2f}"
+            graphics.DrawText(canvas, font_price, 22, 19, change_color, price)
         elif asset['symbol'] == "eth":
+            # graphics.DrawText(canvas, font_symbol_image, 3, 18, symbol_color, 'E')
             img = Image.open(r"image/eth.jpeg")
             price = f"{float(asset['price']):.2f}"
-            graphics.DrawText(canvas, font_price, 25, 19, change_color, price)
+            graphics.DrawText(canvas, font_price, 22, 19, change_color, price)
         elif asset['symbol'] == "xrp":
+            # graphics.DrawText(canvas, font_symbol_image, 3, 18, symbol_color, 'X')
             img = Image.open(r"image/xrp.jpeg")
             price = f"{float(asset['price']):.4f}"
-            graphics.DrawText(canvas, font_price, 25, 19, change_color, price)
-        elif asset['symbol'] == "sol":
-            img = Image.open(r"image/sol.jpeg")
-            price = f"{float(asset['price']):.2f}"
-            graphics.DrawText(canvas, font_price, 25, 19, change_color, price)
+            graphics.DrawText(canvas, font_price, 22, 19, change_color, price)
         # remove half-lighted pixels at the corners
         pixels = img.load()
         pixels[0, 0] = (0, 0, 0, 255)
@@ -140,18 +139,6 @@ class Ticker(Frame):
         pixels[13, 12] = (0, 0, 0, 255)
         pixels[13, 13] = (0, 0, 0, 255)
         canvas.SetImage(img.convert('RGB'), 3, 9)
-
-        # 24 hour change
-        # To right align, we have to calculate the width of the text
-        font_change = graphics.Font()
-        font_change.LoadFont('fonts/4x6.bdf')
-        change_width = sum(
-            [font_change.CharacterWidth(ord(c)) for c in asset['change_24h']+'%']
-        )
-        change_x = 61 - change_width
-        graphics.DrawText(
-            canvas, font_change, change_x, 8, change_color, asset['change_24h']+'%'
-        )
 
         return canvas
 

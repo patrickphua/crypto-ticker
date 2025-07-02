@@ -12,7 +12,7 @@ class Frame:
         self.args['led_chain'] = kwargs.get('led_chain', 1)
         self.args['led_parallel'] = kwargs.get('led_parallel', 1)
         self.args['led_pwm_bits'] = kwargs.get('led_pwm_bits', 11)
-        self.args['led_brightness'] = kwargs.get('led_brightness', 100)
+        self.args['led_brightness'] = kwargs.get('led_brightness', 50)
         self.args['led_gpio_mapping'] = kwargs.get('led_gpio_mapping', 'adafruit-hat')
         self.args['led_scan_mode'] = kwargs.get('led_scan_mode', 1)
         self.args['led_pwm_lsb_nanoseconds'] = kwargs.get('led_pwm_lsb_nanoseconds', 130)

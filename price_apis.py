@@ -10,12 +10,14 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
 handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-API_CLASS_MAP = {'coinmarketcap': 'CoinMarketCap', 'coingecko': 'CoinGecko'}
+API_CLASS_MAP = {'coinmarketcap': 'CoinMarketCap',
+                 'coingecko': 'CoinGecko', 'binance': 'Binance'}
 
 
 def get_api_cls(api_name):
@@ -118,7 +120,8 @@ class CoinMarketCap(PriceAPI):
             except KeyError:
                 # TODO: Add error logging
                 continue
-            price_data.append(dict(symbol=symbol, price=price, change_24h=change_24h))
+            price_data.append(
+                dict(symbol=symbol, price=price, change_24h=change_24h))
 
         return price_data
 
@@ -177,7 +180,7 @@ class CoinGecko(PriceAPI):
 
         for coin_id, data in response.json().items():
             try:
-                price = f"{cur_symbol}{data[cur]:,.2f}"
+                price = f"{cur_symbol}{data[cur]:.2f}"
                 change_24h = f"{data[cur_change]:.1f}%"
             except (KeyError, TypeError):
                 logging.warn(f'api data not complete for {0}: {1}', coin_id, data)
@@ -188,5 +191,39 @@ class CoinGecko(PriceAPI):
                     symbol=self.symbol_map[coin_id], price=price, change_24h=change_24h
                 )
             )
+
+        return price_data
+
+
+class Binance(PriceAPI):
+    API = 'https://api.binance.com/api/v3'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @property
+    def supported_currencies(self):
+        return ["usdt"]
+
+    def fetch_price_data(self):
+        """Fetch new price data from the Binance API"""
+        """logger.info('`fetch_price_data` called.')"""
+
+        price_data = []
+
+        for symbol in self.get_symbols():
+            response = requests.get(
+                f'{self.API}/ticker/24hr',
+                params={'symbol': symbol.upper() + self.currency.upper()}
+            )
+
+            try:
+                responseJSON = response.json()
+                price = f"{float(responseJSON['lastPrice']):.4f}"
+                change_24h = f"{float(responseJSON['priceChangePercent']):.1f}"
+                price_data.append(
+                dict(symbol=symbol, price=price, change_24h=change_24h))
+            except:
+                logger.error(f'JSON decode error: {response.text}')
 
         return price_data
